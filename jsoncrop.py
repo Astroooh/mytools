@@ -2,6 +2,11 @@
    @Time   :2022/3/7 20:44
    -------------------------------------
    2022.6.5 完成json的分割
+   -------------------------------------
+   2022.6.6 发现还有坐标没有根据切片参考系转换
+   -------------------------------------
+   2022.6.7
+
 """
 
 from PIL import Image
@@ -19,8 +24,13 @@ overlap = 100
 stride1 = w-overlap
 stride2 = h-overlap
 ########################################
+'''outputcrop的输出文件位置设置'''
+outputcropdir = r"C:\Users\Astro_h\Desktop\yanzheng\jsonyanzheng\outputcrop"
+if not os.path.exists(outputcropdir):
+    os.makedirs(outputcropdir)
+
 '''jsoncrop的输出文件位置设置'''
-outjsoncropdir=r"C:\Users\Astro_h\Desktop\yanzheng\jsonyanzheng\outjsoncrop"
+outjsoncropdir = r"C:\Users\Astro_h\Desktop\yanzheng\jsonyanzheng\outjsoncrop"
 if not os.path.exists(outjsoncropdir):
     os.makedirs(outjsoncropdir)
 ########################################
@@ -63,8 +73,9 @@ for q in fileList:
             y2 = y + j * stride2 + h
             ##############
             #剪裁图像
-            # region = im.crop((x1, y1, x2, y2))  # 里面要封装成一个元组
-            # region.save(outputcropdir + str(img_name) + 'crop_' + str(j) + str(i) + ".jpg")
+            region = im.crop((x1, y1, x2, y2))  # 里面要封装成一个元组
+            outputpath = os.path.join(outputcropdir,(str(img_name) + 'crop_' + str(j) + str(i) + ".jpg"))
+            region.save(outputpath)
             ##############
             imgcrop[j][i] = [x1, y1, x2, y2]  # 边界储存到对应的位置上, 左上，右下
             print('crop_' + str(j) + str(i) + '的边界', imgcrop[j][i])
