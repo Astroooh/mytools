@@ -3,9 +3,10 @@
    -------------------------------------
    2022.6.5 完成json的分割
    -------------------------------------
-   2022.6.6 发现还有坐标没有根据切片参考系转换
+   2022.6.6 发现还有坐标没有根据切片参考系转换！
    -------------------------------------
-   2022.6.7
+   2022.6.7 解决坐标转换
+            用deepcopy解决变量赋值改变问题
 
 """
 
@@ -23,7 +24,7 @@ h = 720
 overlap = 100
 stride1 = w-overlap
 stride2 = h-overlap
-########################################
+#####################################################
 '''outputcrop的输出文件位置设置'''
 outputcropdir = r"C:\Users\Astro_h\Desktop\yanzheng\jsonyanzheng\outputcrop"
 if not os.path.exists(outputcropdir):
@@ -33,7 +34,7 @@ if not os.path.exists(outputcropdir):
 outjsoncropdir = r"C:\Users\Astro_h\Desktop\yanzheng\jsonyanzheng\outjsoncrop"
 if not os.path.exists(outjsoncropdir):
     os.makedirs(outjsoncropdir)
-########################################
+#####################################################
 
 img_path =r"C:\Users\Astro_h\Desktop\yanzheng\jsonyanzheng\img"
 fileList = os.listdir(img_path)
@@ -101,39 +102,40 @@ for q in fileList:
         centerx=(asp_x1+asp_x2)/2
         centery=(asp_y1+asp_y2)/2
         print('中心点(',centerx,centery,')')
-        #########
+        ##############################################################
         cropl=int(centerx//stride1)  # w,横轴，列数
         croph=int(centery//stride2)  # h,纵轴，行数
         print('位于行列',croph,cropl)
         if asp_x1>imgcrop[croph][cropl][0] and asp_y1>imgcrop[croph][cropl][1]:
+            print("true0")
             if jscrop[croph][cropl] == 0:
-                jscrop[croph][cropl]=[ann['shapes'][i]]
+                jscrop[croph][cropl]=copy.deepcopy([ann['shapes'][i]])  # 不能直接赋值，要deepcopy一份
             else:
-                jscrop[croph][cropl].append(ann['shapes'][i])
+                jscrop[croph][cropl].append(copy.deepcopy(ann['shapes'][i]))
         if centerx<imgcrop[croph-1][cropl-1][2] and centery<imgcrop[croph-1][cropl-1][3]:
             if asp_x2<imgcrop[croph-1][cropl-1][2] and asp_y2<imgcrop[croph-1][cropl-1][3]:
+                print("true1")
                 if jscrop[croph-1][cropl-1] == 0:
-                    jscrop[croph-1][cropl-1] = [ann['shapes'][i]]
+                    jscrop[croph-1][cropl-1] = copy.deepcopy([ann['shapes'][i]])
                 else:
-                    jscrop[croph-1][cropl-1].append(ann['shapes'][i])
+                    jscrop[croph-1][cropl-1].append(copy.deepcopy(ann['shapes'][i]))
 
         if centery<imgcrop[croph-1][cropl][3]:
-            if (asp_x1>imgcrop[croph-1][cropl][0] and asp_y2>imgcrop[croph-1][cropl][1] and
-                asp_x2<(imgcrop[croph-1][cropl][2]) and asp_y2<imgcrop[croph-1][cropl][3]):
+            if asp_x1>imgcrop[croph-1][cropl][0] and asp_y1>imgcrop[croph-1][cropl][1] and asp_x2<imgcrop[croph-1][cropl][2] and asp_y2<imgcrop[croph-1][cropl][3]:
+                print("true2")
                 if jscrop[croph-1][cropl] == 0:
-                    jscrop[croph-1][cropl] = [ann['shapes'][i]]
+                    jscrop[croph-1][cropl] = copy.deepcopy([ann['shapes'][i]])
                 else:
-                    jscrop[croph-1][cropl].append(ann['shapes'][i])
+                    jscrop[croph-1][cropl].append(copy.deepcopy(ann['shapes'][i]))
 
         if centerx<imgcrop[croph][cropl-1][2]:
-            if (asp_x1 > imgcrop[croph][cropl-1][0] and asp_y2 > imgcrop[croph][cropl-1][1] and
-                    asp_x2 < (imgcrop[croph][cropl-1][2]) and asp_y2 < imgcrop[croph][cropl-1][3]):
+            if asp_x1 > imgcrop[croph][cropl-1][0] and asp_y1 > imgcrop[croph][cropl-1][1] and asp_x2 < imgcrop[croph][cropl-1][2] and asp_y2 < imgcrop[croph][cropl-1][3]:
+                print("true3")
                 if jscrop[croph][cropl-1] == 0:
-                    jscrop[croph][cropl-1] = [ann['shapes'][i]]
+                    jscrop[croph][cropl-1] = copy.deepcopy([ann['shapes'][i]])
                 else:
-                    jscrop[croph][cropl-1].append(ann['shapes'][i])
-        ##########
-    #print(jscrop)
+                    jscrop[croph][cropl-1].append(copy.deepcopy(ann['shapes'][i]))
+        #################################################################
     num=0  # 有目标的json切片数量
     for i in range(len(jscrop)):  # i   循环  jscrop的行数
         for j in range(len(jscrop[0])): # j 循环 jscrop的列数
@@ -141,7 +143,15 @@ for q in fileList:
             if jscrop[i][j] != 0:   # 有目标存在的
                 num+=1
                 print('jscrop',i,'行',j,'列',jscrop[i][j])
-
+                #########################################################
+                #坐标转换
+                for s in range(len(jscrop[i][j])):
+                    jscrop[i][j][s]["points"][0][0]-=j*stride1
+                    jscrop[i][j][s]["points"][0][1]-=i*stride2
+                    jscrop[i][j][s]["points"][1][0]-=j*stride1
+                    jscrop[i][j][s]["points"][1][1]-=i*stride2
+                print('转换后的jsoncrop',i,'行',j,'列',jscrop[i][j])
+                #########################################################
                 jsonname = str(img_name)+ 'crop_' + str(i) + str(j) + '.json'
                 jsoncrop_path = os.path.join(outjsoncropdir, jsonname)
 
